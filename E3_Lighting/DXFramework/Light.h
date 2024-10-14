@@ -30,6 +30,7 @@ public:
 		_mm_free(p);
 	}
 
+
 	void generateViewMatrix();			///< Generates and upto date view matrix, based on current rotation
 	void generateProjectionMatrix(float screenNear, float screenFar);			///< Generate project matrix based on current rotation and provided near & far plane
 	void generateOrthoMatrix(float screenWidth, float screenHeight, float near, float far);		///< Generates orthographic matrix based on supplied screen dimensions and near & far plane.
@@ -54,6 +55,19 @@ public:
 	XMMATRIX getProjectionMatrix();		///< Get light projection matrix for shadow mapping, returns XMMATRIX
 	XMMATRIX getOrthoMatrix();			///< Get light orthographic matrix for shadow mapping, returns XMMATRIX
 
+	//custom
+	int getLightType();
+	void setLightType(int tempLightType);
+
+	bool getHasMesh();
+
+	float getSpotlightAngleMax();
+	void setSpotlightAngleMax(float tempAngleMax);
+
+	float getSpotlightAngleMin();
+	void setSpotlightAngleMin(float tempAngleMin);
+
+
 
 protected:
 	XMFLOAT4 ambientColour;
@@ -66,6 +80,15 @@ protected:
 	XMMATRIX projectionMatrix;
 	XMMATRIX orthoMatrix;
 	XMVECTOR lookAt; 
+
+	//custom
+	int lightType;
+	float spotlightAngleMin;
+	float spotlightAngleMax;
+
+private:
+	bool hasMesh;
+
 };
 
 #endif

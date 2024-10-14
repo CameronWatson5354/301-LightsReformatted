@@ -19,12 +19,22 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	// Create Mesh object and shader object
 	mesh = new SphereMesh(renderer->getDevice(), renderer->getDeviceContext());
 	shader = new LightShader(renderer->getDevice(), hwnd);
+
+	planeMesh = new PlaneMesh(renderer->getDevice(), renderer->getDeviceContext());
 	
 	// Initialise light
 	light = new Light();
 	light->setDiffuseColour(1.0f, 1.0f, 1.0f, 1.0f);
 	light->setDirection(1.0f, 0.0f, 0.0f);
 
+	lightMesh = new SphereMesh(renderer->getDevice(), renderer->getDeviceContext());
+
+	ambientLight = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
+
+	//light variables
+	lightType = 0;
+	lightPos = XMFLOAT3(0, 0, 0);
+	lightDirection = XMFLOAT3(0.0f, -1.0f, 0.0f);
 }
 
 
@@ -83,10 +93,45 @@ bool App1::render()
 	viewMatrix = camera->getViewMatrix();
 	projectionMatrix = renderer->getProjectionMatrix();
 
-	// Send geometry data, set shader parameters, render object with shader
+	//update light values
+	light->setLightType(lightType);
+	light->setPosition(lightPos.x, lightPos.y, lightPos.z);
+	light->setDirection(lightDirection.x, lightDirection.y, lightDirection.z);
+
+
+	light->setSpotlightAngleMin(spotlightAngleMin);
+	light->setSpotlightAngleMax(spotlightAngleMax);
+
+	if (spotlightAngleMax >= spotlightAngleMin && spotlightAngleMin > 0.01)
+	{
+		spotlightAngleMax = spotlightAngleMin - 0.01;
+	}
+
+
+
+	// Send geometry data, set shader parameters, render object with shader - render sphere
 	mesh->sendData(renderer->getDeviceContext());
-	shader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), light);
+	shader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), light, ambientLight);
 	shader->render(renderer->getDeviceContext(), mesh->getIndexCount());
+
+	//plane mesh
+	planeMesh->sendData(renderer->getDeviceContext());
+	shader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), light, ambientLight);
+	shader->render(renderer->getDeviceContext(), planeMesh->getIndexCount());
+
+	//render light shape
+	if (light->getHasMesh())
+	{
+		worldMatrix = worldMatrix * XMMatrixScaling(0.5, 0.5, 0.5);
+		worldMatrix = worldMatrix * XMMatrixTranslation(lightPos.x, lightPos.y, lightPos.z);
+		
+
+		lightMesh->sendData(renderer->getDeviceContext());
+		shader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), light, ambientLight);
+		shader->render(renderer->getDeviceContext(), lightMesh->getIndexCount());
+	}
+
+	
 
 	// Render GUI
 	gui();
@@ -107,6 +152,26 @@ void App1::gui()
 	// Build UI
 	ImGui::Text("FPS: %.2f", timer->getFPS());
 	ImGui::Checkbox("Wireframe mode", &wireframeToggle);
+
+	ImGui::SliderInt("LightType", &lightType, 0, 2);
+
+	switch (light->getLightType())
+	{
+	case 0: //directionale
+		ImGui::SliderFloat3("Light Direction", (float*)&lightDirection, -1, 1);
+		break;
+
+	case 1: //point
+		ImGui::SliderFloat3("Light Position", (float*)&lightPos, 0, 100);
+		break;
+
+	case 2: //spotlight
+		ImGui::SliderFloat3("Light Position", (float*)&lightPos, 0, 100);
+		ImGui::SliderFloat3("Light Direction", (float*)&lightDirection, -1, 1);
+		ImGui::SliderFloat("Spotlight Angle Min", &spotlightAngleMin, 0, 90);
+		ImGui::SliderFloat("Spotlight Angle Max", &spotlightAngleMax, 0, spotlightAngleMin - 0.01);
+		break;
+	}
 
 	// Render UI
 	ImGui::Render();

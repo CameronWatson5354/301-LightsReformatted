@@ -19,6 +19,8 @@ struct OutputType
 	float4 position : SV_POSITION;
 	float2 tex : TEXCOORD0;
 	float3 normal : NORMAL;
+	
+    float3 worldPos : POSITION;
 };
 
 OutputType main(InputType input)
@@ -36,6 +38,9 @@ OutputType main(InputType input)
 	// Calculate the normal vector against the world matrix only and normalise.
 	output.normal = mul(input.normal, (float3x3)worldMatrix);
 	output.normal = normalize(output.normal);
+	
+	//world position of vertexes
+    output.worldPos = mul(input.position, worldMatrix);
 
 	return output;
 }

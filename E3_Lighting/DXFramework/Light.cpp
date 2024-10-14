@@ -2,6 +2,7 @@
 // Holds data that represents a single light source
 #include "light.h"
 
+
 // create view matrix, based on light position and lookat. Used for shadow mapping.
 void Light::generateViewMatrix()
 {
@@ -124,3 +125,60 @@ XMMATRIX Light::getOrthoMatrix()
 {
 	return orthoMatrix;
 }
+
+
+//custom
+int Light::getLightType()
+{
+	return lightType;
+}
+
+void Light::setLightType(int tempLightType)
+{
+	lightType = tempLightType;
+
+	if (lightType < 0)
+		lightType = 0;
+	else if (lightType > 2)
+		lightType = 2;
+
+	if (lightType > 0)
+		hasMesh = true;
+	else
+	{
+		hasMesh = false;
+	}
+}
+
+bool Light::getHasMesh()
+{
+	return hasMesh;
+}
+
+float Light::getSpotlightAngleMin()
+{
+	return spotlightAngleMin;
+}
+
+void Light::setSpotlightAngleMin(float tempAngleMin)
+{
+	spotlightAngleMin = tempAngleMin;
+}
+
+float Light::getSpotlightAngleMax()
+{
+	return spotlightAngleMax;
+}
+
+void Light::setSpotlightAngleMax(float tempAngleMax)
+{
+	if (tempAngleMax >= spotlightAngleMin && spotlightAngleMin > 0.01)
+	{
+		tempAngleMax = spotlightAngleMin - 0.01;
+	}
+
+	spotlightAngleMax = tempAngleMax;
+}
+
+
+

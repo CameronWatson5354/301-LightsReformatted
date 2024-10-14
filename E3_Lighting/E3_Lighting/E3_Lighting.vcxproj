@@ -169,6 +169,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App1.h" />
+    <ClInclude Include="LightEnum.h" />
     <ClInclude Include="LightShader.h" />
   </ItemGroup>
   <ItemGroup>

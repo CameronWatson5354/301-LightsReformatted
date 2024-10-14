@@ -24,7 +24,21 @@ protected:
 private:
 	LightShader* shader;
 	SphereMesh* mesh;
+	PlaneMesh* planeMesh;
+
 	Light* light;
+	SphereMesh* lightMesh;
+
+	XMFLOAT4 ambientLight;
+
+	//imgui variables
+	int lightType;
+	XMFLOAT3 lightPos;
+	XMFLOAT3 lightDirection;
+	XMFLOAT2 spotlightAngles;
+
+	float spotlightAngleMin;
+	float spotlightAngleMax;
 };
 
 #endif
