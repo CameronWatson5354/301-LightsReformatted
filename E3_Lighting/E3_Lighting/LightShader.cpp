@@ -85,7 +85,7 @@ void LightShader::initShader(const wchar_t* vsFilename, const wchar_t* psFilenam
 }
 
 
-void LightShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix, ID3D11ShaderResourceView* texture, Light* light, XMFLOAT4 ambient)
+void LightShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix, ID3D11ShaderResourceView* texture, Light* light[], XMFLOAT4 ambient)
 {
 	HRESULT result;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -112,14 +112,22 @@ void LightShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const 
 	deviceContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	lightPtr = (LightBufferType*)mappedResource.pData;
 
-	lightPtr->diffuse = light->getDiffuseColour();
-	lightPtr->direction = light->getDirection();
-	lightPtr->padding = 0.0f;
-	lightPtr->lightType = light->getLightType();
-	lightPtr->lightPos = light->getPosition();
 	lightPtr->ambientLight = ambient;
-	lightPtr->spotlightAngleMin = light->getSpotlightAngleMin();
-	lightPtr->spotlightAngleMax = light->getSpotlightAngleMax();
+
+	for (int i = 0; i < 2; ++i)
+	{
+
+
+
+		lightPtr->diffuse[i] = light[i]->getDiffuseColour();
+		lightPtr->direction[i] = XMFLOAT4(light[i]->getDirection().x, light[i]->getDirection().y, light[i]->getDirection().z, 0);
+		//lightPtr->padding = 0.0f;
+		lightPtr->lightType[i] = XMFLOAT4(light[i]->getLightType(), 0, 0, 0);
+		lightPtr->lightPos[i] = XMFLOAT4(light[i]->getPosition().x, light[i]->getPosition().y, light[i]->getPosition().z, 0);
+		
+		lightPtr->spotlightAngleMin[i] = XMFLOAT4(light[i]->getSpotlightAngleMin(), 0, 0, 0);
+		lightPtr->spotlightAngleMax[i] = XMFLOAT4(light[i]->getSpotlightAngleMax(), 0, 0, 0);
+	}
 
 	deviceContext->Unmap(lightBuffer, 0);
 	deviceContext->PSSetConstantBuffers(0, 1, &lightBuffer);

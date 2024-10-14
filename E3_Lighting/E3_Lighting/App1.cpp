@@ -8,7 +8,7 @@ App1::App1()
 	shader = nullptr;
 }
 
-void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeight, Input *in, bool VSYNC, bool FULL_SCREEN)
+void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeight, Input* in, bool VSYNC, bool FULL_SCREEN)
 {
 	// Call super/parent init function (required!)
 	BaseApplication::init(hinstance, hwnd, screenWidth, screenHeight, in, VSYNC, FULL_SCREEN);
@@ -21,20 +21,26 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	shader = new LightShader(renderer->getDevice(), hwnd);
 
 	planeMesh = new PlaneMesh(renderer->getDevice(), renderer->getDeviceContext());
-	
+
+	currentLight = 0;
+
 	// Initialise light
-	light = new Light();
-	light->setDiffuseColour(1.0f, 1.0f, 1.0f, 1.0f);
-	light->setDirection(1.0f, 0.0f, 0.0f);
+	for (int i = 0; i < 2; ++i)
+	{
+		light[i] = new Light();
+		light[i]->setDiffuseColour(1.0f, 1.0f, 1.0f, 1.0f);
+		light[i]->setDirection(1.0f, 0.0f, 0.0f);
 
-	lightMesh = new SphereMesh(renderer->getDevice(), renderer->getDeviceContext());
+		lightMesh[i] = new SphereMesh(renderer->getDevice(), renderer->getDeviceContext());
 
-	ambientLight = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
+		ambientLight = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
 
-	//light variables
-	lightType = 0;
-	lightPos = XMFLOAT3(0, 0, 0);
-	lightDirection = XMFLOAT3(0.0f, -1.0f, 0.0f);
+		//light variables
+		lightType[i] = 0;
+		lightPos[i] = XMFLOAT3(0, 0, 0);
+		lightDirection[i] = XMFLOAT3(0.0f, -1.0f, 0.0f);
+		lightColour[i] = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	}
 }
 
 
@@ -94,17 +100,19 @@ bool App1::render()
 	projectionMatrix = renderer->getProjectionMatrix();
 
 	//update light values
-	light->setLightType(lightType);
-	light->setPosition(lightPos.x, lightPos.y, lightPos.z);
-	light->setDirection(lightDirection.x, lightDirection.y, lightDirection.z);
+	
+	light[currentLight]->setDiffuseColour(lightColour[currentLight].x, lightColour[currentLight].y, lightColour[currentLight].z, lightColour[currentLight].w);
+	light[currentLight]->setLightType(lightType[currentLight]);
+	light[currentLight]->setPosition(lightPos[currentLight].x, lightPos[currentLight].y, lightPos[currentLight].z);
+	light[currentLight]->setDirection(lightDirection[currentLight].x, lightDirection[currentLight].y, lightDirection[currentLight].z);
 
 
-	light->setSpotlightAngleMin(spotlightAngleMin);
-	light->setSpotlightAngleMax(spotlightAngleMax);
+	light[currentLight]->setSpotlightAngleMin(spotlightAngleMin[currentLight]);
+	light[currentLight]->setSpotlightAngleMax(spotlightAngleMax[currentLight]);
 
-	if (spotlightAngleMax >= spotlightAngleMin && spotlightAngleMin > 0.01)
+	if (spotlightAngleMax[currentLight] >= spotlightAngleMin[currentLight] && spotlightAngleMin[currentLight] > 0.01)
 	{
-		spotlightAngleMax = spotlightAngleMin - 0.01;
+		spotlightAngleMax[currentLight] = spotlightAngleMin[currentLight] - 0.01;
 	}
 
 
@@ -120,15 +128,20 @@ bool App1::render()
 	shader->render(renderer->getDeviceContext(), planeMesh->getIndexCount());
 
 	//render light shape
-	if (light->getHasMesh())
+	for (int i = 0; i < 2; ++i)
 	{
-		worldMatrix = worldMatrix * XMMatrixScaling(0.5, 0.5, 0.5);
-		worldMatrix = worldMatrix * XMMatrixTranslation(lightPos.x, lightPos.y, lightPos.z);
-		
+		worldMatrix = renderer->getWorldMatrix();
 
-		lightMesh->sendData(renderer->getDeviceContext());
-		shader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), light, ambientLight);
-		shader->render(renderer->getDeviceContext(), lightMesh->getIndexCount());
+		if (light[i]->getHasMesh())
+		{
+			worldMatrix = worldMatrix * XMMatrixScaling(0.5, 0.5, 0.5);
+			worldMatrix = worldMatrix * XMMatrixTranslation(lightPos[i].x, lightPos[i].y, lightPos[i].z);
+
+
+			lightMesh[i]->sendData(renderer->getDeviceContext());
+			shader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), light, ambientLight);
+			shader->render(renderer->getDeviceContext(), lightMesh[i]->getIndexCount());
+		}
 	}
 
 	
@@ -153,23 +166,26 @@ void App1::gui()
 	ImGui::Text("FPS: %.2f", timer->getFPS());
 	ImGui::Checkbox("Wireframe mode", &wireframeToggle);
 
-	ImGui::SliderInt("LightType", &lightType, 0, 2);
+	ImGui::SliderInt("Current Light", &currentLight, 0, 1);
+	ImGui::SliderInt("LightType", &lightType[currentLight], 0, 2);
 
-	switch (light->getLightType())
+	ImGui::ColorPicker4("Light Diffuse Colour", (float*)&lightColour[currentLight]);
+
+	switch (light[currentLight]->getLightType())
 	{
 	case 0: //directionale
-		ImGui::SliderFloat3("Light Direction", (float*)&lightDirection, -1, 1);
+		ImGui::SliderFloat3("Light Direction", (float*)&lightDirection[currentLight], -1, 1);
 		break;
 
 	case 1: //point
-		ImGui::SliderFloat3("Light Position", (float*)&lightPos, 0, 100);
+		ImGui::SliderFloat3("Light Position", (float*)&lightPos[currentLight], 0, 100);
 		break;
 
 	case 2: //spotlight
-		ImGui::SliderFloat3("Light Position", (float*)&lightPos, 0, 100);
-		ImGui::SliderFloat3("Light Direction", (float*)&lightDirection, -1, 1);
-		ImGui::SliderFloat("Spotlight Angle Min", &spotlightAngleMin, 0, 90);
-		ImGui::SliderFloat("Spotlight Angle Max", &spotlightAngleMax, 0, spotlightAngleMin - 0.01);
+		ImGui::SliderFloat3("Light Position", (float*)&lightPos[currentLight], 0, 100);
+		ImGui::SliderFloat3("Light Direction", (float*)&lightDirection[currentLight], -1, 1);
+		ImGui::SliderFloat("Spotlight Angle Min", &spotlightAngleMin[currentLight], 0, 90);
+		ImGui::SliderFloat("Spotlight Angle Max", &spotlightAngleMax[currentLight], 0, spotlightAngleMin[currentLight] - 0.01);
 		break;
 	}
 

@@ -6,25 +6,23 @@ SamplerState sampler0 : register(s0);
 
 cbuffer LightBuffer : register(b0)
 {
-	float4 diffuseColour;
-	float3 lightDirection;
-	float padding;
+    float4 diffuseColour[2];
+    float4 lightDirection[2];
 	
-    float lightType;
-    float3 lightPos;
+    float4 lightType[2];
+    float4 lightPos[2];
 	
     float4 ambientLight;
 	
-    float spotlightAngleMin;
-    float spotlightAngleMax;
-    float2 padding2;
+    float4 spotlightAngleMin[2];
+    float4 spotlightAngleMax[2];
 };
 
 struct InputType
 {
-	float4 position : SV_POSITION;
-	float2 tex : TEXCOORD0;
-	float3 normal : NORMAL;
+    float4 position : SV_POSITION;
+    float2 tex : TEXCOORD0;
+    float3 normal : NORMAL;
 	
     float3 worldPos : POSITION;
 };
@@ -32,13 +30,13 @@ struct InputType
 // Calculate lighting intensity based on direction and normal. Combine with light colour.
 float4 calculateLighting(float3 lightDirection, float3 normal, float4 diffuse)
 {
-	float intensity = saturate(dot(normal, lightDirection));
-	float4 colour = saturate(diffuse * intensity);
+    float intensity = saturate(dot(normal, lightDirection));
+    float4 colour = saturate(diffuse * intensity);
 	
-	return colour;
+    return colour;
 }
 
-float calculateSpotlight(float3 lightVector)
+float calculateSpotlight(float3 lightVector, float3 lightDirection, float spotlightAngleMin, float spotlightAngleMax)
 {
     float4 spotLightValue;
 	
@@ -53,30 +51,33 @@ float calculateSpotlight(float3 lightVector)
 
 float4 main(InputType input) : SV_TARGET
 {
-	float4 textureColour;
-	float4 lightColour;
+    float4 textureColour;
+    float4 lightColour = float4(0, 0, 0, 0);
     float4 finalColour;
 
 	// Sample the texture. Calculate light intensity and colour, return light*texture for final pixel colour.
-	textureColour = texture0.Sample(sampler0, input.tex);
+    textureColour = texture0.Sample(sampler0, input.tex);
 	
-    float3 lightVector = normalize(input.worldPos - lightPos);
-    float spotlightStrength = 0;
-	
-    switch (lightType)
+    for (int i = 0; i < 2; ++i)
     {
-		case 0: //directional
-            lightColour = calculateLighting(-lightDirection, input.normal, diffuseColour);
-            break;
+        float3 lightVector = normalize(input.worldPos - lightPos[i].xyz);
+        float spotlightStrength = 0;
+        
+        switch (lightType[i].x)
+        {
+            case 0: //directional
+                lightColour += calculateLighting(-lightDirection[i].xyz, input.normal, diffuseColour[i]);
+                break;
 		
-		case 1: //pointlight
-            lightColour = calculateLighting(-lightVector, input.normal, diffuseColour);
-            break;
+            case 1: //pointlight
+                lightColour += calculateLighting(-lightVector, input.normal, diffuseColour[i]);
+                break;
 		
-		case 2: //spotlight
-            spotlightStrength = calculateSpotlight(-lightVector);
-            lightColour = calculateLighting(-lightVector, input.normal, diffuseColour) * spotlightStrength;
-            break;
+            case 2: //spotlight
+                spotlightStrength = calculateSpotlight(-lightVector, lightDirection[i].xyz, spotlightAngleMin[i].x, spotlightAngleMax[i].y);
+                lightColour += calculateLighting(-lightVector, input.normal, diffuseColour[i]) * spotlightStrength;
+                break;
+        }
     }
 	
     finalColour = (ambientLight + lightColour) * textureColour;
