@@ -49,6 +49,19 @@ float calculateSpotlight(float3 lightVector, float3 lightDirection, float spotli
     return spotLightValue;
 }
 
+float calculateAttenuation(float distance)
+{
+    float attConst = 1;
+    float attLinear = 0.05;
+    float attQuadratic = 0.001;
+    
+    float attenuation;
+    
+    attenuation = 1 / (attConst + attLinear * distance + attQuadratic * distance * distance);
+    
+    return attenuation;
+}
+
 float4 main(InputType input) : SV_TARGET
 {
     float4 textureColour;
@@ -57,25 +70,35 @@ float4 main(InputType input) : SV_TARGET
 
 	// Sample the texture. Calculate light intensity and colour, return light*texture for final pixel colour.
     textureColour = texture0.Sample(sampler0, input.tex);
-	
+    
     for (int i = 0; i < 2; ++i)
     {
+        //variables that have to be recalculated for each light
         float3 lightVector = normalize(input.worldPos - lightPos[i].xyz);
+        float distanceFromLight = length(lightPos[i].xyz - input.worldPos);
         float spotlightStrength = 0;
+        float attenuation = 0;
         
         switch (lightType[i].x)
         {
-            case 0: //directional
+            case 0: //none
+                break;
+            
+            case 1: //directional
                 lightColour += calculateLighting(-lightDirection[i].xyz, input.normal, diffuseColour[i]);
                 break;
 		
-            case 1: //pointlight
-                lightColour += calculateLighting(-lightVector, input.normal, diffuseColour[i]);
+            case 2: //pointlight
+                attenuation = calculateAttenuation(distanceFromLight);
+            
+                lightColour += calculateLighting(-lightVector, input.normal, diffuseColour[i]) * attenuation;
                 break;
 		
-            case 2: //spotlight
-                spotlightStrength = calculateSpotlight(-lightVector, lightDirection[i].xyz, spotlightAngleMin[i].x, spotlightAngleMax[i].y);
-                lightColour += calculateLighting(-lightVector, input.normal, diffuseColour[i]) * spotlightStrength;
+            case 3: //spotlight
+                spotlightStrength = calculateSpotlight(-lightVector, lightDirection[i].xyz, spotlightAngleMin[i].x, spotlightAngleMax[i].x);
+                attenuation = calculateAttenuation(distanceFromLight);
+            
+                lightColour += calculateLighting(-lightVector, input.normal, diffuseColour[i]) * spotlightStrength * attenuation;
                 break;
         }
     }

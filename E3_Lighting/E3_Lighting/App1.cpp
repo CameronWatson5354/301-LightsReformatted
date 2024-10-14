@@ -167,21 +167,21 @@ void App1::gui()
 	ImGui::Checkbox("Wireframe mode", &wireframeToggle);
 
 	ImGui::SliderInt("Current Light", &currentLight, 0, 1);
-	ImGui::SliderInt("LightType", &lightType[currentLight], 0, 2);
+	ImGui::SliderInt("LightType", &lightType[currentLight], 0, 3);
 
 	ImGui::ColorPicker4("Light Diffuse Colour", (float*)&lightColour[currentLight]);
 
 	switch (light[currentLight]->getLightType())
 	{
-	case 0: //directionale
+	case 1: //directionale
 		ImGui::SliderFloat3("Light Direction", (float*)&lightDirection[currentLight], -1, 1);
 		break;
 
-	case 1: //point
+	case 2: //point
 		ImGui::SliderFloat3("Light Position", (float*)&lightPos[currentLight], 0, 100);
 		break;
 
-	case 2: //spotlight
+	case 3: //spotlight
 		ImGui::SliderFloat3("Light Position", (float*)&lightPos[currentLight], 0, 100);
 		ImGui::SliderFloat3("Light Direction", (float*)&lightDirection[currentLight], -1, 1);
 		ImGui::SliderFloat("Spotlight Angle Min", &spotlightAngleMin[currentLight], 0, 90);

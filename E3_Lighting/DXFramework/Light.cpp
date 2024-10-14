@@ -137,13 +137,15 @@ void Light::setLightType(int tempLightType)
 {
 	lightType = tempLightType;
 
-	if (lightType < 0)
+	/*if (lightType < 0)
 		lightType = 0;
-	else if (lightType > 2)
-		lightType = 2;
+	else if (lightType > 3)
+		lightType = 3;*/
 
 	if (lightType > 0)
+	{
 		hasMesh = true;
+	}
 	else
 	{
 		hasMesh = false;
