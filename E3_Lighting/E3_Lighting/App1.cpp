@@ -8,6 +8,7 @@ App1::App1()
 	shader = nullptr;
 }
 
+
 void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeight, Input* in, bool VSYNC, bool FULL_SCREEN)
 {
 	// Call super/parent init function (required!)
@@ -25,10 +26,11 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	currentLight = 0;
 
 	// Initialise light
-	for (int i = 0; i < 2; ++i)
+	for (int i = 0; i < numOfLights; ++i)
 	{
 		light[i] = new Light();
 		light[i]->setDiffuseColour(1.0f, 1.0f, 1.0f, 1.0f);
+		//light[i]->setSpecularColour(1.0f, 1.0f, 1.0f, 1.0f);
 		light[i]->setDirection(1.0f, 0.0f, 0.0f);
 
 		lightMesh[i] = new SphereMesh(renderer->getDevice(), renderer->getDeviceContext());
@@ -40,6 +42,8 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 		lightPos[i] = XMFLOAT3(0, 0, 0);
 		lightDirection[i] = XMFLOAT3(0.0f, -1.0f, 0.0f);
 		lightColour[i] = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+		specularColour[i] = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+		specularPower[i] = 20.0f;
 	}
 }
 
@@ -102,6 +106,8 @@ bool App1::render()
 	//update light values
 	
 	light[currentLight]->setDiffuseColour(lightColour[currentLight].x, lightColour[currentLight].y, lightColour[currentLight].z, lightColour[currentLight].w);
+	light[currentLight]->setSpecularColour(specularColour[currentLight].x, specularColour[currentLight].y, specularColour[currentLight].z, specularColour[currentLight].w);
+	light[currentLight]->setSpecularPower(specularPower[currentLight]);
 	light[currentLight]->setLightType(lightType[currentLight]);
 	light[currentLight]->setPosition(lightPos[currentLight].x, lightPos[currentLight].y, lightPos[currentLight].z);
 	light[currentLight]->setDirection(lightDirection[currentLight].x, lightDirection[currentLight].y, lightDirection[currentLight].z);
@@ -119,16 +125,16 @@ bool App1::render()
 
 	// Send geometry data, set shader parameters, render object with shader - render sphere
 	mesh->sendData(renderer->getDeviceContext());
-	shader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), light, ambientLight);
+	shader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), light, ambientLight, camera);
 	shader->render(renderer->getDeviceContext(), mesh->getIndexCount());
 
 	//plane mesh
 	planeMesh->sendData(renderer->getDeviceContext());
-	shader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), light, ambientLight);
+	shader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), light, ambientLight, camera);
 	shader->render(renderer->getDeviceContext(), planeMesh->getIndexCount());
 
 	//render light shape
-	for (int i = 0; i < 2; ++i)
+	for (int i = 0; i < numOfLights; ++i)
 	{
 		worldMatrix = renderer->getWorldMatrix();
 
@@ -139,7 +145,7 @@ bool App1::render()
 
 
 			lightMesh[i]->sendData(renderer->getDeviceContext());
-			shader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), light, ambientLight);
+			shader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), light, ambientLight, camera);
 			shader->render(renderer->getDeviceContext(), lightMesh[i]->getIndexCount());
 		}
 	}
@@ -166,10 +172,12 @@ void App1::gui()
 	ImGui::Text("FPS: %.2f", timer->getFPS());
 	ImGui::Checkbox("Wireframe mode", &wireframeToggle);
 
-	ImGui::SliderInt("Current Light", &currentLight, 0, 1);
+	ImGui::SliderInt("Current Light", &currentLight, 0, numOfLights - 1);
 	ImGui::SliderInt("LightType", &lightType[currentLight], 0, 3);
 
 	ImGui::ColorPicker4("Light Diffuse Colour", (float*)&lightColour[currentLight]);
+	ImGui::ColorPicker4("Specular Colour", (float*)&specularColour[currentLight]);
+	ImGui::SliderFloat("Specular Power", &specularPower[currentLight], 0, 100);
 
 	switch (light[currentLight]->getLightType())
 	{

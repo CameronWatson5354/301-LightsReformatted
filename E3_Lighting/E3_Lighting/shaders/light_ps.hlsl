@@ -6,16 +6,19 @@ SamplerState sampler0 : register(s0);
 
 cbuffer LightBuffer : register(b0)
 {
-    float4 diffuseColour[2];
-    float4 lightDirection[2];
+    float4 diffuseColour[8];
+    float4 lightDirection[8]; //originates from light
 	
-    float4 lightType[2];
-    float4 lightPos[2];
+    float4 lightType[8];
+    float4 lightPos[8];
 	
     float4 ambientLight;
 	
-    float4 spotlightAngleMin[2];
-    float4 spotlightAngleMax[2];
+    float4 spotlightAngleMin[8];
+    float4 spotlightAngleMax[8];
+    
+    float4 specular[8];
+    float4 specularPower[8];
 };
 
 struct InputType
@@ -25,6 +28,7 @@ struct InputType
     float3 normal : NORMAL;
 	
     float3 worldPos : POSITION;
+    float3 viewVector : VECTOR;
 };
 
 // Calculate lighting intensity based on direction and normal. Combine with light colour.
@@ -62,22 +66,38 @@ float calculateAttenuation(float distance)
     return attenuation;
 }
 
+float4 calculateSpecular(float3 pixelLightDirection, float3 viewVector, float3 normal, float4 specular, float specularPower)
+{  
+    
+    float4 specularLight;
+    
+    float3 halfway = normalize(pixelLightDirection + viewVector);
+    
+    float specularIntensity = pow(max(dot(normal, halfway), 0.0), specularPower);
+    
+    specularLight = saturate(specular * specularIntensity);
+    
+    return specularLight;
+}
+
 float4 main(InputType input) : SV_TARGET
 {
     float4 textureColour;
     float4 lightColour = float4(0, 0, 0, 0);
     float4 finalColour;
+    float4 specularColour = float4(0, 0, 0, 0);
 
 	// Sample the texture. Calculate light intensity and colour, return light*texture for final pixel colour.
     textureColour = texture0.Sample(sampler0, input.tex);
     
-    for (int i = 0; i < 2; ++i)
+    for (int i = 0; i < 8; ++i)
     {
         //variables that have to be recalculated for each light
-        float3 lightVector = normalize(input.worldPos - lightPos[i].xyz);
+        float3 lightVector = normalize(input.worldPos - lightPos[i].xyz); //originates from light
         float distanceFromLight = length(lightPos[i].xyz - input.worldPos);
-        float spotlightStrength = 0;
-        float attenuation = 0;
+        float spotlightStrength = 1;
+        float attenuationStrength = 1;
+       
         
         switch (lightType[i].x)
         {
@@ -85,25 +105,32 @@ float4 main(InputType input) : SV_TARGET
                 break;
             
             case 1: //directional
-                lightColour += calculateLighting(-lightDirection[i].xyz, input.normal, diffuseColour[i]);
+                specularColour += calculateSpecular(-lightDirection[i].xyz, input.viewVector, input.normal, specular[0], specularPower[i].x);
+                //lightColour += calculateLighting(-lightDirection[i].xyz, input.normal, diffuseColour[i]);
                 break;
 		
             case 2: //pointlight
-                attenuation = calculateAttenuation(distanceFromLight);
+                attenuationStrength = calculateAttenuation(distanceFromLight);
             
-                lightColour += calculateLighting(-lightVector, input.normal, diffuseColour[i]) * attenuation;
+                specularColour += calculateSpecular(-lightVector, input.viewVector, input.normal, specular[i], specularPower[i].x) * attenuationStrength;
+                //lightColour += (calculateLighting(-lightVector, input.normal, diffuseColour[i]) * attenuationStrength);
                 break;
 		
             case 3: //spotlight
                 spotlightStrength = calculateSpotlight(-lightVector, lightDirection[i].xyz, spotlightAngleMin[i].x, spotlightAngleMax[i].x);
-                attenuation = calculateAttenuation(distanceFromLight);
+                attenuationStrength = calculateAttenuation(distanceFromLight);
             
-                lightColour += calculateLighting(-lightVector, input.normal, diffuseColour[i]) * spotlightStrength * attenuation;
+                specularColour += calculateSpecular(-lightVector, input.viewVector, input.normal, specular[i], specularPower[i].x) * attenuationStrength * spotlightStrength;
+                //lightColour += (calculateLighting(-lightVector, input.normal, diffuseColour[i]) * spotlightStrength * attenuationStrength);
                 break;
         }
+        
+        lightColour += (calculateLighting(-lightVector, input.normal, diffuseColour[i]) * spotlightStrength * attenuationStrength);
     }
+    
+    
 	
-    finalColour = (ambientLight + lightColour) * textureColour;
+    finalColour = (ambientLight + lightColour) * textureColour + specularColour;
 	
     return finalColour;
 	

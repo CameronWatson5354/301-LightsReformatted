@@ -26,21 +26,23 @@ private:
 	SphereMesh* mesh;
 	PlaneMesh* planeMesh;
 
-
-	Light* light[2];
-	SphereMesh* lightMesh[2];
+	int numOfLights = 8;
+	Light* light[8];
+	SphereMesh* lightMesh[8];
 
 	XMFLOAT4 ambientLight;
 
 	//imgui variables
 	int currentLight;
-	int lightType[2];
-	XMFLOAT4 lightColour[2];
-	XMFLOAT3 lightPos[2];
-	XMFLOAT3 lightDirection[2];
-	XMFLOAT2 spotlightAngles[2];
+	int lightType[8];
+	XMFLOAT4 lightColour[8];
+	XMFLOAT4 specularColour[8];
+	float specularPower[8];
+	XMFLOAT3 lightPos[8];
+	XMFLOAT3 lightDirection[8];
+	XMFLOAT2 spotlightAngles[8];
 
-	float spotlightAngleMin[2];
+	float spotlightAngleMin[8];
 	float spotlightAngleMax[2];
 };
 
